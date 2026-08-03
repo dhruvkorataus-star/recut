@@ -1,0 +1,25 @@
+# Dependencies — never commit these; they're huge and rebuilt from package.json
+node_modules/
+
+# Environment variables — SECRETS live here. Never commit real credentials.
+.env
+.env.local
+.env.*.local
+
+# Build output — generated from source, no need to track
+dist/
+build/
+
+# Local model / media caches (added on later steps)
+.cache/
+uploads/
+tmp/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / OS junk
+.DS_Store
+.vscode/
+.idea/
