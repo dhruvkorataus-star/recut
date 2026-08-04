@@ -1,0 +1,82 @@
+// Recut database schema. Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Where the audio came from.
+enum JobSource {
+  YOUTUBE
+  UPLOAD
+}
+
+// A job walks through these states as the pipeline runs.
+enum JobStatus {
+  QUEUED
+  FETCHING
+  TRANSCRIBING
+  GENERATING
+  DONE
+  FAILED
+}
+
+// The four kinds of output we generate from one transcript.
+enum ResultKind {
+  THREAD
+  LINKEDIN
+  BLOG
+  CLIPS
+}
+
+// One repurpose job: a single upload or link, tracked through the pipeline.
+model Job {
+  id          String    @id @default(uuid())
+  source      JobSource
+  sourceUrl   String?
+  fileName    String?
+  title       String?
+  status      JobStatus @default(QUEUED)
+  error       String?
+  transcript  String?
+  durationSec Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  segments Segment[]
+  results  Result[]
+}
+
+// A timestamped chunk of the transcript. These power the clip suggestions.
+model Segment {
+  id        String   @id @default(uuid())
+  idx       Int
+  startSec  Float
+  endSec    Float
+  text      String
+  createdAt DateTime @default(now())
+
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+}
+
+// One generated output. content is markdown for text kinds, JSON for CLIPS.
+model Result {
+  id        String     @id @default(uuid())
+  kind      ResultKind
+  content   String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  jobId String
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, kind])
+  @@index([jobId])
+}
