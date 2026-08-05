@@ -14,8 +14,6 @@ const upload = multer({
 
 const router = Router();
 
-// Create a job from either a YouTube URL (JSON or form field) or a file upload.
-// For now the audio is fetched inline; Step 6 moves this into a background worker.
 router.post('/', upload.single('file'), async (req, res) => {
   const url = typeof req.body?.url === 'string' ? req.body.url.trim() : '';
   const file = req.file;
@@ -53,7 +51,6 @@ router.post('/', upload.single('file'), async (req, res) => {
 
     const updated = await prisma.job.update({
       where: { id: job.id },
-      // Audio is ready and waiting for transcription (built in Step 4).
       data: {
         status: 'QUEUED',
         title,
@@ -78,7 +75,6 @@ router.post('/', upload.single('file'), async (req, res) => {
   }
 });
 
-// yt-dlp names the file with the real extension, so find it by the job-id prefix.
 async function findDownloaded(jobId: string): Promise<string> {
   const files = await readdir(UPLOADS_DIR);
   const match = files.find((name) => name.startsWith(`${jobId}-src.`));

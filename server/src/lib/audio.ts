@@ -4,8 +4,6 @@ import ffmpegPath from 'ffmpeg-static';
 
 const run = promisify(execFile);
 
-// Convert any audio/video file to 16 kHz mono 16-bit WAV — the exact shape
-// Whisper wants — and return the source's duration in seconds.
 export async function toWav16kMono(inputPath: string, outputPath: string): Promise<number> {
   if (!ffmpegPath) throw new Error('ffmpeg binary not found');
 
@@ -18,7 +16,6 @@ export async function toWav16kMono(inputPath: string, outputPath: string): Promi
   return parseDurationSec(stderr);
 }
 
-// ffmpeg prints "Duration: 00:03:21.45" to stderr; pull the seconds out of it.
 function parseDurationSec(stderr: string): number {
   const match = stderr.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
   if (!match) return 0;

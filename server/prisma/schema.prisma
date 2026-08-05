@@ -1,5 +1,3 @@
-// Recut database schema. Learn more: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -9,13 +7,11 @@ datasource db {
   provider = "postgresql"
 }
 
-// Where the audio came from.
 enum JobSource {
   YOUTUBE
   UPLOAD
 }
 
-// A job walks through these states as the pipeline runs.
 enum JobStatus {
   QUEUED
   FETCHING
@@ -25,7 +21,6 @@ enum JobStatus {
   FAILED
 }
 
-// The four kinds of output we generate from one transcript.
 enum ResultKind {
   THREAD
   LINKEDIN
@@ -33,7 +28,6 @@ enum ResultKind {
   CLIPS
 }
 
-// One repurpose job: a single upload or link, tracked through the pipeline.
 model Job {
   id          String    @id @default(uuid())
   source      JobSource
@@ -51,7 +45,6 @@ model Job {
   results  Result[]
 }
 
-// A timestamped chunk of the transcript. These power the clip suggestions.
 model Segment {
   id        String   @id @default(uuid())
   idx       Int
@@ -66,7 +59,6 @@ model Segment {
   @@index([jobId])
 }
 
-// One generated output. content is markdown for text kinds, JSON for CLIPS.
 model Result {
   id        String     @id @default(uuid())
   kind      ResultKind

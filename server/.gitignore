@@ -3,8 +3,5 @@ dist/
 .env
 *.log
 
-# Generated Prisma client — rebuilt by `prisma generate` on install/build
 /src/generated/prisma
-
-# Uploaded and transcoded media — runtime working files, not source
 /storage
