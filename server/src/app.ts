@@ -1,5 +1,6 @@
 import cors from 'cors';
 import express from 'express';
+import jobsRoutes from './routes/jobs.js';
 
 export const allowedOrigins = (process.env.CLIENT_URL ?? 'http://localhost:5173')
   .split(',')
@@ -14,5 +15,7 @@ app.use(express.json());
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'recut-api' });
 });
+
+app.use('/api/jobs', jobsRoutes);
 
 export default app;

@@ -15,7 +15,9 @@
 ```bash
 # server
 cd server
-npm install
+# yt-dlp's installer has a false-positive Python check; the binary it
+# downloads is standalone, so skip it:
+YOUTUBE_DL_SKIP_PYTHON_CHECK=1 npm install
 npm run dev        # http://localhost:4000
 
 # client (separate terminal)
