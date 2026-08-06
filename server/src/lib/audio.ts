@@ -16,6 +16,20 @@ export async function toWav16kMono(inputPath: string, outputPath: string): Promi
   return parseDurationSec(stderr);
 }
 
+export async function readAudioSamples(inputPath: string): Promise<Float32Array> {
+  if (!ffmpegPath) throw new Error('ffmpeg binary not found');
+
+  const { stdout } = await run(
+    ffmpegPath,
+    ['-i', inputPath, '-f', 'f32le', '-ac', '1', '-ar', '16000', '-'],
+    { encoding: 'buffer', maxBuffer: 1024 * 1024 * 1024 },
+  );
+
+  const buf = stdout as unknown as Buffer;
+  const usable = buf.length - (buf.length % 4);
+  return new Float32Array(buf.buffer.slice(buf.byteOffset, buf.byteOffset + usable));
+}
+
 function parseDurationSec(stderr: string): number {
   const match = stderr.match(/Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/);
   if (!match) return 0;

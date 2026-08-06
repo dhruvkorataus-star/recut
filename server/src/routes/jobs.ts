@@ -5,6 +5,7 @@ import multer from 'multer';
 import prisma from '../lib/prisma.js';
 import { toWav16kMono } from '../lib/audio.js';
 import { audioPathFor, UPLOADS_DIR } from '../lib/storage.js';
+import { transcribeAudio } from '../lib/transcribe.js';
 import { downloadAudio, fetchYoutubeInfo } from '../lib/youtube.js';
 
 const upload = multer({
@@ -72,6 +73,50 @@ router.post('/', upload.single('file'), async (req, res) => {
       data: { status: 'FAILED', error: message },
     });
     res.status(500).json({ error: 'Failed to process the input.', jobId: job.id });
+  }
+});
+
+router.post('/:id/transcribe', async (req, res) => {
+  const job = await prisma.job.findUnique({ where: { id: req.params.id } });
+  if (!job) {
+    return res.status(404).json({ error: 'Job not found.' });
+  }
+
+  await prisma.job.update({ where: { id: job.id }, data: { status: 'TRANSCRIBING' } });
+
+  try {
+    const { text, segments } = await transcribeAudio(audioPathFor(job.id));
+
+    await prisma.$transaction([
+      prisma.segment.deleteMany({ where: { jobId: job.id } }),
+      prisma.segment.createMany({
+        data: segments.map((segment, idx) => ({
+          jobId: job.id,
+          idx,
+          startSec: segment.start,
+          endSec: segment.end,
+          text: segment.text,
+        })),
+      }),
+      prisma.job.update({
+        where: { id: job.id },
+        data: { transcript: text, status: 'QUEUED' },
+      }),
+    ]);
+
+    res.json({
+      id: job.id,
+      status: 'QUEUED',
+      segments: segments.length,
+      transcript: text,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await prisma.job.update({
+      where: { id: job.id },
+      data: { status: 'FAILED', error: message },
+    });
+    res.status(500).json({ error: 'Transcription failed.', jobId: job.id });
   }
 });
 
