@@ -4,6 +4,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import prisma from '../lib/prisma.js';
 import { toWav16kMono } from '../lib/audio.js';
+import { generateBlog, generateClips, generateLinkedIn, generateThread } from '../lib/generate.js';
 import { audioPathFor, UPLOADS_DIR } from '../lib/storage.js';
 import { transcribeAudio } from '../lib/transcribe.js';
 import { downloadAudio, fetchYoutubeInfo } from '../lib/youtube.js';
@@ -117,6 +118,58 @@ router.post('/:id/transcribe', async (req, res) => {
       data: { status: 'FAILED', error: message },
     });
     res.status(500).json({ error: 'Transcription failed.', jobId: job.id });
+  }
+});
+
+router.post('/:id/generate', async (req, res) => {
+  const job = await prisma.job.findUnique({
+    where: { id: req.params.id },
+    include: { segments: { orderBy: { idx: 'asc' } } },
+  });
+  if (!job) {
+    return res.status(404).json({ error: 'Job not found.' });
+  }
+  if (!job.transcript) {
+    return res.status(400).json({ error: 'Job has no transcript yet.' });
+  }
+
+  await prisma.job.update({ where: { id: job.id }, data: { status: 'GENERATING' } });
+
+  try {
+    const title = job.title ?? 'Untitled';
+    const [thread, linkedin, blog, clips] = await Promise.all([
+      generateThread(job.transcript, title),
+      generateLinkedIn(job.transcript, title),
+      generateBlog(job.transcript, title),
+      generateClips(job.transcript, job.segments),
+    ]);
+
+    const outputs: Array<{ kind: 'THREAD' | 'LINKEDIN' | 'BLOG' | 'CLIPS'; content: string }> = [
+      { kind: 'THREAD', content: thread },
+      { kind: 'LINKEDIN', content: linkedin },
+      { kind: 'BLOG', content: blog },
+      { kind: 'CLIPS', content: JSON.stringify(clips) },
+    ];
+
+    await prisma.$transaction([
+      ...outputs.map((output) =>
+        prisma.result.upsert({
+          where: { jobId_kind: { jobId: job.id, kind: output.kind } },
+          create: { jobId: job.id, kind: output.kind, content: output.content },
+          update: { content: output.content },
+        }),
+      ),
+      prisma.job.update({ where: { id: job.id }, data: { status: 'DONE' } }),
+    ]);
+
+    res.json({ id: job.id, status: 'DONE', results: { thread, linkedin, blog, clips } });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    await prisma.job.update({
+      where: { id: job.id },
+      data: { status: 'FAILED', error: message },
+    });
+    res.status(500).json({ error: 'Generation failed.', jobId: job.id });
   }
 });
 
