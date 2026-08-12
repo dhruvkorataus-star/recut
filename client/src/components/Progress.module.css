@@ -1,0 +1,81 @@
+.card {
+  padding: 1.8rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.heading {
+  margin: 0 0 1.4rem;
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-size: 1.7rem;
+  color: #f4f4f4;
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.label {
+  font-size: 0.98rem;
+}
+
+.step[data-state='pending'] {
+  color: #5c5c5c;
+}
+
+.step[data-state='active'] .icon {
+  border-color: #f4f4f4;
+  color: #f4f4f4;
+}
+
+.step[data-state='active'] .label {
+  color: var(--ink);
+}
+
+.step[data-state='done'] {
+  color: var(--ink-soft);
+}
+
+.step[data-state='done'] .icon {
+  border-color: #4ba35a;
+  color: #4ba35a;
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.note {
+  margin: 1.6rem 0 0;
+  font-size: 0.84rem;
+  color: #6b6b6b;
+  line-height: 1.5;
+}
