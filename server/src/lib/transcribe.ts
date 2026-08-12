@@ -24,15 +24,18 @@ export interface TranscriptResult {
   segments: TranscriptSegment[];
 }
 
+type WhisperOutput = { text?: string; chunks?: Array<{ timestamp: [number, number | null]; text: string }> };
+type WhisperCall = (audio: Float32Array, options: Record<string, unknown>) => Promise<WhisperOutput>;
+
 export async function transcribeAudio(wavPath: string): Promise<TranscriptResult> {
-  const transcriber = await getTranscriber();
+  const transcriber = (await getTranscriber()) as unknown as WhisperCall;
   const audio = await readAudioSamples(wavPath);
 
-  const output = (await transcriber(audio, {
+  const output = await transcriber(audio, {
     return_timestamps: true,
     chunk_length_s: 30,
     stride_length_s: 5,
-  })) as { text?: string; chunks?: Array<{ timestamp: [number, number | null]; text: string }> };
+  });
 
   const segments: TranscriptSegment[] = (output.chunks ?? []).map((chunk) => ({
     start: chunk.timestamp[0] ?? 0,

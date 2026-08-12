@@ -1,4 +1,9 @@
-import youtubeDl from 'youtube-dl-exec';
+import youtubeDlExec from 'youtube-dl-exec';
+
+const youtubeDl = youtubeDlExec as unknown as (
+  url: string,
+  options?: Record<string, unknown>,
+) => Promise<unknown>;
 
 const JS_RUNTIME = 'node';
 

@@ -1,13 +1,8 @@
-import { readdir, unlink } from 'node:fs/promises';
-import path from 'node:path';
 import { Router } from 'express';
 import multer from 'multer';
 import prisma from '../lib/prisma.js';
-import { toWav16kMono } from '../lib/audio.js';
-import { generateBlog, generateClips, generateLinkedIn, generateThread } from '../lib/generate.js';
-import { audioPathFor, UPLOADS_DIR } from '../lib/storage.js';
-import { transcribeAudio } from '../lib/transcribe.js';
-import { downloadAudio, fetchYoutubeInfo } from '../lib/youtube.js';
+import { enqueueJob } from '../lib/pipeline.js';
+import { UPLOADS_DIR } from '../lib/storage.js';
 
 const upload = multer({
   dest: UPLOADS_DIR,
@@ -29,155 +24,44 @@ router.post('/', upload.single('file'), async (req, res) => {
       source: url ? 'YOUTUBE' : 'UPLOAD',
       sourceUrl: url || null,
       fileName: file?.originalname ?? null,
-      status: 'FETCHING',
+      status: 'QUEUED',
     },
   });
 
-  try {
-    let sourcePath: string;
-    let title = file?.originalname ?? null;
-    let durationHint = 0;
+  enqueueJob({ jobId: job.id, uploadPath: file?.path });
 
-    if (url) {
-      const info = await fetchYoutubeInfo(url);
-      title = info.title;
-      durationHint = info.durationSec;
-      await downloadAudio(url, path.join(UPLOADS_DIR, `${job.id}-src.%(ext)s`));
-      sourcePath = await findDownloaded(job.id);
-    } else {
-      sourcePath = file!.path;
-    }
-
-    const parsedDuration = await toWav16kMono(sourcePath, audioPathFor(job.id));
-    await unlink(sourcePath).catch(() => {});
-
-    const updated = await prisma.job.update({
-      where: { id: job.id },
-      data: {
-        status: 'QUEUED',
-        title,
-        durationSec: parsedDuration || durationHint || null,
-      },
-    });
-
-    res.status(201).json({
-      id: updated.id,
-      status: updated.status,
-      source: updated.source,
-      title: updated.title,
-      durationSec: updated.durationSec,
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await prisma.job.update({
-      where: { id: job.id },
-      data: { status: 'FAILED', error: message },
-    });
-    res.status(500).json({ error: 'Failed to process the input.', jobId: job.id });
-  }
+  res.status(201).json({ id: job.id, status: job.status });
 });
 
-router.post('/:id/transcribe', async (req, res) => {
-  const job = await prisma.job.findUnique({ where: { id: req.params.id } });
-  if (!job) {
-    return res.status(404).json({ error: 'Job not found.' });
-  }
-
-  await prisma.job.update({ where: { id: job.id }, data: { status: 'TRANSCRIBING' } });
-
-  try {
-    const { text, segments } = await transcribeAudio(audioPathFor(job.id));
-
-    await prisma.$transaction([
-      prisma.segment.deleteMany({ where: { jobId: job.id } }),
-      prisma.segment.createMany({
-        data: segments.map((segment, idx) => ({
-          jobId: job.id,
-          idx,
-          startSec: segment.start,
-          endSec: segment.end,
-          text: segment.text,
-        })),
-      }),
-      prisma.job.update({
-        where: { id: job.id },
-        data: { transcript: text, status: 'QUEUED' },
-      }),
-    ]);
-
-    res.json({
-      id: job.id,
-      status: 'QUEUED',
-      segments: segments.length,
-      transcript: text,
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await prisma.job.update({
-      where: { id: job.id },
-      data: { status: 'FAILED', error: message },
-    });
-    res.status(500).json({ error: 'Transcription failed.', jobId: job.id });
-  }
-});
-
-router.post('/:id/generate', async (req, res) => {
+router.get('/:id', async (req, res) => {
   const job = await prisma.job.findUnique({
     where: { id: req.params.id },
-    include: { segments: { orderBy: { idx: 'asc' } } },
+    include: { results: true },
   });
   if (!job) {
     return res.status(404).json({ error: 'Job not found.' });
   }
-  if (!job.transcript) {
-    return res.status(400).json({ error: 'Job has no transcript yet.' });
-  }
 
-  await prisma.job.update({ where: { id: job.id }, data: { status: 'GENERATING' } });
+  const byKind = Object.fromEntries(job.results.map((result) => [result.kind, result.content]));
 
-  try {
-    const title = job.title ?? 'Untitled';
-    const [thread, linkedin, blog, clips] = await Promise.all([
-      generateThread(job.transcript, title),
-      generateLinkedIn(job.transcript, title),
-      generateBlog(job.transcript, title),
-      generateClips(job.transcript, job.segments),
-    ]);
-
-    const outputs: Array<{ kind: 'THREAD' | 'LINKEDIN' | 'BLOG' | 'CLIPS'; content: string }> = [
-      { kind: 'THREAD', content: thread },
-      { kind: 'LINKEDIN', content: linkedin },
-      { kind: 'BLOG', content: blog },
-      { kind: 'CLIPS', content: JSON.stringify(clips) },
-    ];
-
-    await prisma.$transaction([
-      ...outputs.map((output) =>
-        prisma.result.upsert({
-          where: { jobId_kind: { jobId: job.id, kind: output.kind } },
-          create: { jobId: job.id, kind: output.kind, content: output.content },
-          update: { content: output.content },
-        }),
-      ),
-      prisma.job.update({ where: { id: job.id }, data: { status: 'DONE' } }),
-    ]);
-
-    res.json({ id: job.id, status: 'DONE', results: { thread, linkedin, blog, clips } });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    await prisma.job.update({
-      where: { id: job.id },
-      data: { status: 'FAILED', error: message },
-    });
-    res.status(500).json({ error: 'Generation failed.', jobId: job.id });
-  }
+  res.json({
+    id: job.id,
+    status: job.status,
+    source: job.source,
+    title: job.title,
+    durationSec: job.durationSec,
+    error: job.error,
+    createdAt: job.createdAt,
+    results:
+      job.status === 'DONE'
+        ? {
+            thread: byKind.THREAD ?? null,
+            linkedin: byKind.LINKEDIN ?? null,
+            blog: byKind.BLOG ?? null,
+            clips: byKind.CLIPS ? JSON.parse(byKind.CLIPS) : null,
+          }
+        : null,
+  });
 });
-
-async function findDownloaded(jobId: string): Promise<string> {
-  const files = await readdir(UPLOADS_DIR);
-  const match = files.find((name) => name.startsWith(`${jobId}-src.`));
-  if (!match) throw new Error('Downloaded audio file not found');
-  return path.join(UPLOADS_DIR, match);
-}
 
 export default router;

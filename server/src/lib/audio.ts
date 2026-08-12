@@ -1,8 +1,9 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import ffmpegPath from 'ffmpeg-static';
+import ffmpegStatic from 'ffmpeg-static';
 
 const run = promisify(execFile);
+const ffmpegPath = ffmpegStatic as unknown as string | null;
 
 export async function toWav16kMono(inputPath: string, outputPath: string): Promise<number> {
   if (!ffmpegPath) throw new Error('ffmpeg binary not found');

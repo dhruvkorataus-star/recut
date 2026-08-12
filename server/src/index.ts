@@ -1,8 +1,13 @@
 import 'dotenv/config';
-import app from './app.js';
+import { createServer } from 'node:http';
+import app, { allowedOrigins } from './app.js';
+import { initRealtime } from './lib/realtime.js';
 
 const PORT = process.env.PORT ?? 4000;
 
-app.listen(PORT, () => {
+const httpServer = createServer(app);
+initRealtime(httpServer, allowedOrigins);
+
+httpServer.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
