@@ -1,10 +1,10 @@
 :root {
-  color-scheme: light;
-  --ink: #17150f;
-  --ink-soft: #5c574c;
-  --paper: #f7f4ec;
-  --line: #e4ded0;
-  --accent: #c2410c;
+  color-scheme: dark;
+  --ink: #ededed;
+  --ink-soft: #9a9a9a;
+  --bg: #101010;
+  --surface: #171717;
+  --line: #272727;
 }
 
 * {
@@ -20,7 +20,7 @@ body,
 
 body {
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  background: var(--paper);
+  background: var(--bg);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }
