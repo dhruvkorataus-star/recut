@@ -7,8 +7,10 @@
 
 .heading {
   margin: 0 0 1.4rem;
-  font-family: 'Instrument Serif', Georgia, serif;
-  font-size: 1.7rem;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 1.45rem;
+  letter-spacing: -0.02em;
   color: #f4f4f4;
 }
 

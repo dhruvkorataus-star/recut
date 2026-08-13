@@ -9,6 +9,8 @@ import styles from './App.module.css'
 
 type Phase = 'idle' | 'running' | 'done' | 'error'
 
+const REPO_URL = 'https://github.com/dhruvkorataus-star/recut'
+
 function App() {
   const [phase, setPhase] = useState<Phase>('idle')
   const [status, setStatus] = useState('QUEUED')
@@ -78,36 +80,56 @@ function App() {
   const compact = phase !== 'idle'
 
   return (
-    <main className={styles.shell}>
-      <header className={compact ? styles.headerCompact : styles.header}>
-        <span className={styles.badge}>Recut</span>
-        {!compact && (
-          <>
-            <h1 className={styles.title}>One recording, every format.</h1>
-            <p className={styles.sub}>
-              Paste a YouTube link or drop a file. Get a thread, a LinkedIn post, a blog draft, and
-              clip-ready timestamps — from a single upload.
-            </p>
-          </>
-        )}
-      </header>
+    <div className={styles.page}>
+      <main className={styles.shell}>
+        <header className={compact ? styles.headerCompact : styles.header}>
+          <span className={styles.badge}>Recut</span>
+          {!compact && (
+            <>
+              <h1 className={styles.title}>One recording, every format.</h1>
+              <p className={styles.sub}>
+                Paste a YouTube link or drop a file. Get a thread, a LinkedIn post, a blog draft, and
+                clip-ready timestamps — from a single upload.
+              </p>
+            </>
+          )}
+        </header>
 
-      {phase === 'idle' && <JobInput onSubmit={handleSubmit} submitting={submitting} />}
-      {phase === 'running' && <Progress status={status} title={title} />}
-      {phase === 'done' && job && <Results job={job} />}
-      {phase === 'error' && (
-        <div className={styles.error}>
-          <p>{error}</p>
+        <div key={phase} className={styles.stage}>
+          {phase === 'idle' && <JobInput onSubmit={handleSubmit} submitting={submitting} />}
+          {phase === 'running' && <Progress status={status} title={title} />}
+          {phase === 'done' && job && <Results job={job} />}
+          {phase === 'error' && (
+            <div className={styles.error}>
+              <p>{error}</p>
+            </div>
+          )}
         </div>
-      )}
 
-      {compact && (
-        <button type="button" className={styles.reset} onClick={reset}>
-          <RotateCcw size={15} />
-          Start over
-        </button>
-      )}
-    </main>
+        {compact && (
+          <button type="button" className={styles.reset} onClick={reset}>
+            <RotateCcw size={15} />
+            Start over
+          </button>
+        )}
+      </main>
+
+      <footer className={styles.footer}>
+        <div className={styles.footerInner}>
+          <div>
+            <span className={styles.footerLogo}>recut</span>
+            <p className={styles.footerTagline}>One recording, every format.</p>
+          </div>
+          <a className={styles.footerLink} href={REPO_URL} target="_blank" rel="noreferrer">
+            Source on GitHub
+          </a>
+        </div>
+        <div className={styles.footerBar}>
+          <span>© {new Date().getFullYear()} Recut</span>
+          <span>A portfolio project by Dharmesh Korat</span>
+        </div>
+      </footer>
+    </div>
   )
 }
 

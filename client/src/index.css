@@ -2,9 +2,12 @@
   color-scheme: dark;
   --ink: #ededed;
   --ink-soft: #9a9a9a;
-  --bg: #101010;
-  --surface: #171717;
+  --ink-faint: #6b6b6b;
+  --bg: #0d0d0d;
+  --surface: #161616;
+  --surface-2: #101010;
   --line: #272727;
+  --line-soft: #1f1f1f;
 }
 
 * {
@@ -20,7 +23,26 @@ body,
 
 body {
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  background: var(--bg);
   color: var(--ink);
+  background:
+    radial-gradient(1100px 520px at 50% -8%, #1c1a17 0%, rgba(28, 26, 23, 0) 60%),
+    var(--bg);
+  background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2c2c2c;
+  border-radius: 6px;
+  border: 2px solid var(--bg);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a;
 }
