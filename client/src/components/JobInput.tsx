@@ -25,6 +25,13 @@ function JobInput({ onSubmit, submitting }: Props) {
     else if (url.trim()) onSubmit({ url: url.trim() })
   }
 
+  async function useSample() {
+    if (submitting) return
+    const res = await fetch('/sample.mp3')
+    const blob = await res.blob()
+    onSubmit({ file: new File([blob], 'sample.mp3', { type: 'audio/mpeg' }) })
+  }
+
   const ready = Boolean(file || url.trim())
 
   return (
@@ -77,6 +84,10 @@ function JobInput({ onSubmit, submitting }: Props) {
 
       <button type="submit" className={styles.submit} disabled={!ready || submitting}>
         {submitting ? 'Starting…' : 'Repurpose it'}
+      </button>
+
+      <button type="button" className={styles.sample} onClick={useSample} disabled={submitting}>
+        or try it with a 40-second sample clip
       </button>
     </form>
   )
