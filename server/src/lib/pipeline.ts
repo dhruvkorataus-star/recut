@@ -57,11 +57,15 @@ async function processJob({ jobId, uploadPath }: QueueItem) {
     let durationHint = 0;
 
     if (job.source === 'YOUTUBE' && job.sourceUrl) {
-      const info = await fetchYoutubeInfo(job.sourceUrl);
-      title = info.title;
-      durationHint = info.durationSec;
-      await downloadAudio(job.sourceUrl, path.join(UPLOADS_DIR, `${jobId}-src.%(ext)s`));
-      sourcePath = await findDownloaded(jobId);
+      try {
+        const info = await fetchYoutubeInfo(job.sourceUrl);
+        title = info.title;
+        durationHint = info.durationSec;
+        await downloadAudio(job.sourceUrl, path.join(UPLOADS_DIR, `${jobId}-src.%(ext)s`));
+        sourcePath = await findDownloaded(jobId);
+      } catch (err) {
+        throw new Error(youtubeErrorMessage(err));
+      }
     } else if (uploadPath) {
       sourcePath = uploadPath;
     } else {
@@ -134,4 +138,15 @@ async function findDownloaded(jobId: string): Promise<string> {
   const match = files.find((name) => name.startsWith(`${jobId}-src.`));
   if (!match) throw new Error('Downloaded audio file not found');
   return path.join(UPLOADS_DIR, match);
+}
+
+function youtubeErrorMessage(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  if (/not a bot|Sign in to confirm|cookies/i.test(raw)) {
+    return 'YouTube is blocking downloads from our server. Please upload the audio or video file directly instead.';
+  }
+  if (/unavailable|private|members-only|age/i.test(raw)) {
+    return 'That video could not be downloaded (it may be private, unavailable, or region-locked). Try another link, or upload the file.';
+  }
+  return 'Could not fetch that YouTube link. Try uploading the file instead.';
 }

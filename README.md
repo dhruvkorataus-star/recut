@@ -5,6 +5,13 @@ podcast, and Recut transcribes it and turns it into a Twitter/X thread, a
 LinkedIn post, a blog draft, and five short-form clip suggestions with
 timestamps — from a single input.
 
+**Live demo: https://recut-tau.vercel.app**
+
+> The API runs on a free Render instance that sleeps after 15 minutes of
+> inactivity, so the first request after a quiet spell can take 30–60 seconds to
+> wake it. On the hosted demo use **file upload** — YouTube blocks downloads from
+> cloud servers (see *What is not built*).
+
 ## The problem I was trying to solve
 
 A creator records one good hour — a podcast, a talk, a long video. Getting it
@@ -140,6 +147,12 @@ and `GROQ_MODEL` to change the text model.
 
 The honest edges, because they're the interesting part:
 
+- **YouTube import doesn't work on the hosted demo.** YouTube blocks downloads
+  from datacenter IPs with a "confirm you're not a bot" wall, so on the deployed
+  server a link fails with a message asking you to upload the file instead. Run
+  it locally, from a home connection, and YouTube links work fine. Fixing it in
+  production would mean shipping cookies or paying for a residential proxy —
+  both with real downsides, so I left it honest instead.
 - **The job queue lives in memory.** It runs one job at a time and forgets
   anything queued if the server restarts. A real deployment would move this to a
   durable queue.
